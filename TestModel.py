@@ -142,3 +142,4 @@ def test(loader, model, criterion, device):
     print(f"Mean IoU: {mean_iou_score:.4f}")
 
 test(test_loader, model, criterion, device)
+
