@@ -1,0 +1,27 @@
+# Core dependencies
+torch==2.0.1
+torchvision==0.15.2
+segmentation-models-pytorch==0.3.2
+pytorch-toolbelt==0.6.3
+
+# Image processing
+opencv-python-headless==4.7.0.72  # opencv without GUI support, suitable for Docker
+
+# Data manipulation
+numpy==1.24.3
+pandas==2.0.3
+
+# Visualization and debugging
+matplotlib==3.7.1
+tqdm==4.65.0
+
+# Additional dependencies
+albumentations==1.3.0  # For data augmentation
+Pillow==9.4.0  # For image handling
+scikit-learn==1.2.2  # For metrics and other utilities
+
+# For handling configurations
+PyYAML==6.0
+
+# Ensure pip is up-to-date
+pip==23.1.2
