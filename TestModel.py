@@ -20,11 +20,10 @@ modelPath = './deeplab_model_67.pth'
 
 root_dir = '/home/hossam/Cityscapes/archive/kaggle/input/cityscapes/Cityspaces/'
 
-images_dir = os.path.join(root_dir, 'images/train')
-gtfine_dir = os.path.join(root_dir, 'gtFine/train')
+images_dir = os.path.join(root_dir, 'images/val')
+gtfine_dir = os.path.join(root_dir, 'gtFine/val')
 
-cities = ['aachen', 'bochum', 'bremen', 'cologne', 'darmstadt', 'dusseldorf', 'erfurt', 'hamburg', 'hanover', 'jena',
-          'krefeld', 'monchengladbach', 'strasbourg', 'stuttgart', 'tubingen', 'ulm', 'weimar', 'zurich']
+cities = ['frankfurt','lindau','munster']
 
 data = []
 
@@ -43,7 +42,7 @@ for city in cities:
         else:
             print(f'{label_train_ids_path} not found')
 
-save_csv('test_data.csv', data[int(0.99*len(data)):])
+save_csv('test_data.csv', data)
 
 test_csv = 'test_data.csv'
 test_df = pd.read_csv(test_csv)
