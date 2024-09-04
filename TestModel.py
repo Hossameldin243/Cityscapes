@@ -16,9 +16,9 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import csv
 
-modelPath = './pre_unet.pth'
+modelPath = './deeplab_model_67.pth'
 
-root_dir = 'dataset/kaggle/input/cityscapes/Cityspaces/'
+root_dir = '/home/hossam/Cityscapes/archive/kaggle/input/cityscapes/Cityspaces/'
 
 images_dir = os.path.join(root_dir, 'images/train')
 gtfine_dir = os.path.join(root_dir, 'gtFine/train')
@@ -43,7 +43,7 @@ for city in cities:
         else:
             print(f'{label_train_ids_path} not found')
 
-save_csv('test_data.csv', data)
+save_csv('test_data.csv', data[int(0.99*len(data)):])
 
 test_csv = 'test_data.csv'
 test_df = pd.read_csv(test_csv)
@@ -51,11 +51,9 @@ test_df = pd.read_csv(test_csv)
 Test_data_transform = Compose([
     Load(keys=['image_path', 'annotation_path'], images_dir=images_dir, gtfine_dir=gtfine_dir),
     Remap(keys=['annotation_path']),
-    equalizeHistogram(keys=['image_path']),
     adjustGamma(keys=['image_path']),
     contrastStretch(keys=['image_path']),
-    Resize(keys=['image_path', 'annotation_path']),
-    toGrayscale(keys=['image_path', 'annotation_path']),
+    toGrayscale(keys=['annotation_path']),
     Normalise(keys=['image_path']),
     toTensor(keys=['image_path', 'annotation_path'])
 ])
@@ -69,18 +67,17 @@ test_dataset = dataset(
 
 test_loader = DataLoader(
     dataset=test_dataset,
-    batch_size=8,
-    num_workers=2,
+    batch_size=2,
     shuffle=False
 )
 
 # Load Model
 
-model = smp.Unet(
-    encoder_name="resnet34",
-    encoder_weights="imagenet",
-    in_channels=1,
-    classes=20,
+model = smp.DeepLabV3Plus(
+    encoder_name="mobilenet_v2", 
+    encoder_weights="imagenet",  
+    in_channels=3,
+    classes=20 
 )
 
 device = torch.device("cpu")
@@ -88,8 +85,7 @@ criterion = DiceLoss(mode='multiclass', from_logits=False, ignore_index=0)
 
 early_stopping = EarlyStopping(patience=5, min_delta=0.001)    
     
-model = model.to(device)
-model = nn.DataParallel(model) 
+model = model.to(device)    
     
 model.load_state_dict(torch.load(modelPath, map_location=torch.device('cpu')))
 
@@ -112,6 +108,12 @@ def test(loader, model, criterion, device):
             for batch in loader:
                 images = batch['image_path'].to(device)
                 annotations = batch['annotation_path'].to(device)
+
+                if images.dim() == 5:
+                    images = images.squeeze(1)
+
+                if images.size(-1) == 3: 
+                    images = images.permute(0, 3, 1, 2) 
                 
                 outputs = model(images)
                 outputs = torch.softmax(outputs, dim=1)
@@ -119,27 +121,16 @@ def test(loader, model, criterion, device):
                 loss = criterion(outputs, annotations)
                 running_loss += loss.item()
 
-                pixel_acc = PixelAccuracy.pixel_accuracy(annotations, outputs)
-                total_pixel_correct += pixel_acc * torch.numel(annotations)
-                total_pixel_count += torch.numel(annotations)
-
                 jaccard_loss = jaccard_loss_fn(outputs, annotations)
                 total_iou_sum += 1 - jaccard_loss.item()
                 
                 pbar.update(1)
-                pbar.set_postfix(loss=running_loss / (pbar.n + 1))
     
-    avg_loss = running_loss / total_batches
-    print(f"Average Test Loss: {avg_loss:.4f}")
-    
+    avg_loss = running_loss / total_batches    
     avg_score = 1-avg_loss
     print(f"Average Dice Score: {avg_score:.4f}")
-    
-    pixel_acc_score = total_pixel_correct / total_pixel_count
-    print(f"Pixel Accuracy: {pixel_acc_score:.4f}")
 
     mean_iou_score = total_iou_sum / total_batches
     print(f"Mean IoU: {mean_iou_score:.4f}")
 
 test(test_loader, model, criterion, device)
-
